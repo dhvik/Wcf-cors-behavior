@@ -45,19 +45,19 @@ namespace Cors {
 		/// </returns>
 		public object AfterReceiveRequest(ref Message request, IClientChannel channel, InstanceContext instanceContext) {
 			CorsState state = null;
-			HttpRequestMessageProperty reqProp = null;
+			HttpRequestMessageProperty responseProperty = null;
 			if (request.Properties.ContainsKey(HttpRequestMessageProperty.Name)) {
-				reqProp = request.Properties[HttpRequestMessageProperty.Name] as HttpRequestMessageProperty;
+				responseProperty = request.Properties[HttpRequestMessageProperty.Name] as HttpRequestMessageProperty;
 			}
 
-			if (reqProp != null) {
+			if (responseProperty != null) {
 
 				//Handle cors requests
-				var origin = reqProp.Headers["Origin"];
+				var origin = responseProperty.Headers["Origin"];
 				if (!string.IsNullOrEmpty(origin)) {
 					state = new CorsState();
 					//if a cors options request (preflight) is detected, we create our own reply message and don't invoke any operation at all.
-					if (reqProp.Method == "OPTIONS") {
+					if (responseProperty.Method == "OPTIONS") {
 						state.Message = Message.CreateMessage(request.Version, FindReplyAction(request.Headers.Action), new EmptyBodyWriter());
 					}
 					request.Properties.Add(CrossOriginResourceSharingPropertyName, state);
@@ -113,20 +113,20 @@ namespace Cors {
 				if (state.Message != null) {
 					reply = state.Message;
 				}
-				HttpResponseMessageProperty reqProp = null;
+				HttpResponseMessageProperty responseProperty = null;
 				if (reply.Properties.ContainsKey(HttpResponseMessageProperty.Name)) {
-					reqProp = reply.Properties[HttpResponseMessageProperty.Name] as HttpResponseMessageProperty;
+					responseProperty = reply.Properties[HttpResponseMessageProperty.Name] as HttpResponseMessageProperty;
 				}
-				if (reqProp == null) {
-					reqProp = new HttpResponseMessageProperty();
-					reply.Properties.Add(HttpResponseMessageProperty.Name, reqProp);
+				if (responseProperty == null) {
+					responseProperty = new HttpResponseMessageProperty();
+					reply.Properties.Add(HttpResponseMessageProperty.Name, responseProperty);
 				}
 				//Acao should be added for all cors responses
-				reqProp.Headers.Add("Access-Control-Allow-Origin", _behavior.AllowOrigin);
+				responseProperty.Headers.Set("Access-Control-Allow-Origin", _behavior.AllowOrigin);
 				if (state.Message != null) {
 					//the following headers should only be added for OPTIONS requests
-					reqProp.Headers.Add("Access-Control-Allow-Methods", _behavior.AllowMethods);
-					reqProp.Headers.Add("Access-Control-Allow-Headers", _behavior.AllowHeaders);
+					responseProperty.Headers.Set("Access-Control-Allow-Methods", _behavior.AllowMethods);
+					responseProperty.Headers.Set("Access-Control-Allow-Headers", _behavior.AllowHeaders);
 				}
 
 			}
